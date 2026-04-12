@@ -1,8 +1,8 @@
-# 🚀 SistemaDiag: Mobile PC Diagnostic Suite
+# 🚀 SistemDiag: Mobile PC Diagnostic Suite
 
 ### *Hardware Monitoring & Real-Time Analytics Platform*
 
-**SistemaDiag-IoT** es una solución híbrida de monitoreo de hardware diseñada para técnicos y entusiastas del mantenimiento de computadoras. El sistema extrae métricas críticas de rendimiento (CPU, RAM, Disco) en cualquier sistema operativo y las transmite simultáneamente a un hardware físico (ESP8266) y a un dashboard web en la nube en tiempo real.
+**SistemDiag** es una solución híbrida de monitoreo de hardware diseñada para técnicos y entusiastas del mantenimiento de computadoras. El sistema extrae métricas críticas de rendimiento (CPU, RAM, Disco) en cualquier sistema operativo y las transmite simultáneamente a un hardware físico (ESP8266) y a un dashboard web en la nube en tiempo real.
 
 ---
 
@@ -64,4 +64,4 @@ El sistema sigue un flujo asíncrono para garantizar que el diagnóstico no afec
 ---
 
 **Desarrollado por:** [Jose Luciano Caamal](https://github.com/JoseLucianoCaamal)  
-*Ingeniería de Software Aplicada al Mantenimiento de Hardware.*
+*Ingeniería en Computacion.*
