@@ -4,97 +4,78 @@ import psutil
 import platform
 import subprocess
 import time
+import requests # Recuerda agregar esto a tu .bat (pip install requests)
 
-# --- FUNCIONES DE DETECCIÓN DE HARDWARE ---
+# --- CONFIGURACIÓN ---
+# Reemplaza con tu URL de Firebase (la que termina en .json)
+URL_WEB = "https://sistem-diag-default-rtdb.firebaseio.com/monitoreo.json"
 
-def obtener_nombre_cpu():
+def obtener_info_fija():
+    """Detecta el modelo de CPU y tamaños totales según el SO."""
     sistema = platform.system()
     try:
         if sistema == "Windows":
-            # Comando directo de Windows para el nombre real
             cmd = "wmic cpu get name"
-            raw = subprocess.check_output(cmd, shell=True).decode('utf-8')
-            name = raw.split('\n')[1].strip()
-        elif sistema == "Darwin": # macOS
+            raw = subprocess.check_output(cmd, shell=True).decode().strip().split('\n')
+            cpu = raw[1].strip() if len(raw) > 1 else platform.processor()
+        elif sistema == "Darwin": # Mac
             cmd = "sysctl -n machdep.cpu.brand_string"
-            name = subprocess.check_output(cmd, shell=True).decode('utf-8').strip()
+            cpu = subprocess.check_output(cmd, shell=True).decode().strip()
         else: # Linux
             cmd = "grep 'model name' /proc/cpuinfo | head -n 1"
-            name = subprocess.check_output(cmd, shell=True).decode('utf-8').split(":")[1].strip()
-        
-        # Limpieza para que quepa en el OLED (max 18 carac)
-        clean_name = name.replace("Intel(R) Core(TM) ", "").replace("CPU ", "").split("@")[0]
-        return clean_name.strip()[:18]
+            cpu = subprocess.check_output(cmd, shell=True).decode().split(":")[1].strip()
     except:
-        return platform.processor()[:18]
+        cpu = "CPU Desconocida"
 
-def obtener_datos_sistema():
-    sistema = platform.system()
-    ruta_disco = "C:" if sistema == "Windows" else "/"
-    
-    # 1. RAM Total
     ram_t = f"{round(psutil.virtual_memory().total / (1024**3))}GB"
+    ruta = "C:" if sistema == "Windows" else "/"
+    disk_t = f"{round(psutil.disk_usage(ruta).total / (1024**3))}GB"
     
-    # 2. Disco Total
-    try:
-        disk_t = f"{round(psutil.disk_usage(ruta_disco).total / (1024**3))}GB"
-    except:
-        disk_t = "Error"
-        
-    # 3. Porcentajes de monitoreo
-    cpu_p = int(psutil.cpu_percent())
-    ram_p = int(psutil.virtual_memory().percent)
-    disk_p = int(psutil.disk_usage(ruta_disco).percent)
-    
-    return cpu_p, ram_p, disk_p, ram_t, disk_t
+    return cpu[:18].strip(), ram_t, disk_t
 
-# --- LÓGICA DE CONEXIÓN Y ENVÍO ---
-
-def buscar_esp8266():
-    """Busca el puerto serial del ESP8266 dinámicamente."""
-    puertos = serial.tools.list_ports.comports()
-    for p in puertos:
-        desc = p.description.upper()
-        # Buscamos palabras clave de los drivers del ESP
-        if any(x in desc for x in ["CH340", "CP210", "USB-SERIAL", "USB SERIAL"]):
-            return p.device
-    return None
-
-def ejecutar_diagnostico():
+def enviar_datos():
+    cpu_mod, ram_t, disk_t = obtener_info_fija()
     esp = None
-    cpu_modelo = obtener_nombre_cpu()
-    print(f"Sistema detectado: {platform.system()}")
-    print(f"Procesador: {cpu_modelo}")
+    ruta_disco = "C:" if platform.system() == "Windows" else "/"
+
+    print(f"Iniciando en {platform.system()}...")
 
     while True:
-        if esp is None:
-            puerto = buscar_esp8266()
-            if puerto:
-                try:
-                    esp = serial.Serial(port=puerto, baudrate=115200, timeout=1)
-                    print(f"--> ESP8266 encontrado en {puerto}")
-                    time.sleep(2) # Pausa para que el ESP despierte
-                    
-                    # Enviar Inventario una vez al conectar
-                    _, _, _, ram_t, disk_t = obtener_datos_sistema()
-                    paquete_inv = f"INV:{cpu_modelo},{ram_t},{disk_t}\n"
-                    esp.write(bytes(paquete_inv, 'utf-8'))
-                except:
-                    esp = None
-            else:
-                print("Buscando ESP8266... conecta el dispositivo.")
-                time.sleep(3)
-                continue
+        # 1. Obtener porcentajes en tiempo real
+        cpu_p = int(psutil.cpu_percent())
+        ram_p = int(psutil.virtual_memory().percent)
+        disk_p = int(psutil.disk_usage(ruta_disco).percent)
 
+        # 2. ENVIAR A LA WEB (Firebase)
+        payload = {
+            "info": {"cpu_mod": cpu_mod, "ram_t": ram_t, "disk_t": disk_t},
+            "stats": {"cpu": cpu_p, "ram": ram_p, "disk": disk_p},
+            "status": "Online",
+            "time": time.strftime("%H:%M:%S")
+        }
         try:
-            # Obtener y enviar monitoreo
-            c, r, d, _, _ = obtener_datos_sistema()
-            paquete_mon = f"MON:{c},{r},{d}\n"
-            esp.write(bytes(paquete_mon, 'utf-8'))
-            time.sleep(1)
+            requests.put(URL_WEB, json=payload, timeout=1.5)
         except:
-            print("(!) Conexión perdida con el dispositivo.")
-            esp = None
+            pass
+
+        # 3. ENVIAR AL ESP8266 (Serial)
+        if esp is None:
+            puertos = serial.tools.list_ports.comports()
+            for p in puertos:
+                if any(x in p.description.upper() for x in ["CH340", "CP210", "USB"]):
+                    try:
+                        esp = serial.Serial(port=p.device, baudrate=115200, timeout=1)
+                        time.sleep(2)
+                        # Enviar inventario inicial al ESP
+                        esp.write(bytes(f"INV:{cpu_mod},{ram_t},{disk_t}\n", 'utf-8'))
+                    except: esp = None
+
+        if esp:
+            try:
+                esp.write(bytes(f"MON:{cpu_p},{ram_p},{disk_p}\n", 'utf-8'))
+            except: esp = None
+
+        time.sleep(1)
 
 if __name__ == "__main__":
-    ejecutar_diagnostico()
+    enviar_datos()
