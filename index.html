@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SISTEMA DIAG | Enterprise Edition</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #00d4ff;
+            --secondary: #ff0055;
+            --bg: #0b0e14;
+            --card-bg: #151921;
+            --border: #252a34;
+        }
+
+        body {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background-color: var(--bg);
+            color: #fff;
+            margin: 0; padding: 20px;
+            display: flex; flex-direction: column; align-items: center;
+        }
+
+        /* Información de Hardware con estilo de Terminal */
+        .hw-info {
+            background: rgba(0, 212, 255, 0.05);
+            padding: 15px 40px;
+            border-radius: 5px;
+            display: flex; gap: 30px;
+            font-size: 0.85rem;
+            border: 1px solid var(--primary);
+            margin-bottom: 30px;
+            text-transform: uppercase;
+        }
+
+        .container {
+            display: flex; justify-content: center; flex-wrap: wrap; gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            width: 220px; padding: 25px;
+            border-radius: 10px; border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .percentage { font-size: 2.5rem; font-weight: bold; color: var(--primary); }
+        .label { font-size: 0.7rem; color: #666; letter-spacing: 2px; margin-top: 10px; }
+
+        /* Contenedor de la Gráfica */
+        .chart-container {
+            background: var(--card-bg);
+            width: 90%; max-width: 900px;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .status-dot {
+            height: 8px; width: 8px;
+            background-color: var(--primary);
+            border-radius: 50%; display: inline-block;
+            margin-right: 5px;
+            box-shadow: 0 0 10px var(--primary);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <h2 style="color: var(--primary); letter-spacing: 5px;">> SYSTEM_DIAG_OS_V3</h2>
+    
+    <div class="hw-info">
+        <span><i class="fas fa-microchip"></i> <span id="cpu_mod">SEARCHING...</span></span>
+        <span><i class="fas fa-memory"></i> <span id="ram_t">--</span></span>
+        <span><i class="fas fa-database"></i> <span id="disk_t">--</span></span>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div id="cpu-val" class="percentage">0%</div>
+            <div class="label">CPU_LOAD</div>
+        </div>
+        <div class="card">
+            <div id="ram-val" class="percentage">0%</div>
+            <div class="label">RAM_USAGE</div>
+        </div>
+        <div class="card">
+            <div id="disk-val" class="percentage">0%</div>
+            <div class="label">DISK_STATUS</div>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <canvas id="realtimeChart"></canvas>
+    </div>
+
+    <div style="margin-top: 20px; font-size: 0.7rem; color: #444;">
+        <span class="status-dot"></span> LIVE_DATA_STREAM_ON_PORT_80
+    </div>
+
+    <script>
+        const dbUrl = "https://sistem-diag-default-rtdb.firebaseio.com/monitoreo.json";
+        
+        // CONFIGURACIÓN DE LA GRÁFICA
+        const ctx = document.getElementById('realtimeChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [], // Aquí irán los segundos
+                datasets: [{
+                    label: 'CPU %',
+                    borderColor: '#00d4ff',
+                    borderWidth: 2,
+                    data: [],
+                    fill: false,
+                    tension: 0.4
+                }, {
+                    label: 'RAM %',
+                    borderColor: '#ff0055',
+                    borderWidth: 2,
+                    data: [],
+                    fill: false,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { min: 0, max: 100, grid: { color: '#222' } },
+                    x: { grid: { display: false } }
+                },
+                plugins: { legend: { labels: { color: '#fff' } } }
+            }
+        });
+
+        async function update() {
+            try {
+                const res = await fetch(dbUrl);
+                const data = await res.json();
+                if(!data) return;
+
+                // Texto
+                document.getElementById('cpu_mod').innerText = data.info.cpu_mod;
+                document.getElementById('ram_t').innerText = data.info.ram_t;
+                document.getElementById('disk_t').innerText = data.info.disk_t;
+                document.getElementById('cpu-val').innerText = data.stats.cpu + "%";
+                document.getElementById('ram-val').innerText = data.stats.ram + "%";
+                document.getElementById('disk-val').innerText = data.stats.disk + "%";
+
+                // Actualizar Gráfica
+                const now = data.time;
+                if (chart.data.labels.length > 20) {
+                    chart.data.labels.shift();
+                    chart.data.datasets[0].data.shift();
+                    chart.data.datasets[1].data.shift();
+                }
+                chart.data.labels.push(now);
+                chart.data.datasets[0].data.push(data.stats.cpu);
+                chart.data.datasets[1].data.push(data.stats.ram);
+                chart.update('none'); // Update sin animaciones bruscas
+
+            } catch (e) { console.error(e); }
+        }
+
+        setInterval(update, 1000);
+    </script>
+</body>
+</html>
