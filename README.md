@@ -37,6 +37,7 @@ El proyecto se divide en cuatro capas de ingeniería integradas:
 1. Abre una terminal en la carpeta del proyecto.
 2. Otorga permisos de ejecución: `chmod +x iniciar_diagnostico.sh`.
 3. Ejecuta: `./iniciar_diagnostico.sh`.
+4. En su caso Propiedades del archivo.sh, habilitar la opcion de ejecutar como programa.
 
 ---
 
