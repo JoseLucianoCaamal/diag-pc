@@ -5,88 +5,96 @@ import platform
 import subprocess
 import time
 import requests
+import datetime
 
 # --- CONFIGURACIÓN ---
 URL_WEB = "https://sistem-diag-default-rtdb.firebaseio.com/monitoreo.json"
 
+def obtener_salud_bateria():
+    """Calcula la salud de la batería en Windows."""
+    try:
+        if platform.system() == "Windows":
+            # Obtenemos capacidad de diseño y capacidad a carga completa
+            cmd_cap = "wmic /namespace:\\\\root\\wmi path BatteryStaticData get DesignedCapacity"
+            cmd_full = "wmic /namespace:\\\\root\\wmi path BatteryFullChargeCapacity get FullChargeCapacity"
+            
+            cap_diseno = int(subprocess.check_output(cmd_cap, shell=True).decode().split('\n')[1].strip())
+            cap_actual = int(subprocess.check_output(cmd_full, shell=True).decode().split('\n')[1].strip())
+            
+            salud = (cap_actual / cap_diseno) * 100
+            return round(min(salud, 100), 1)
+    except:
+        pass
+    return "N/A"
+
 def obtener_info_fija():
     sistema = platform.system()
+    user = subprocess.check_output("whoami", shell=True).decode().strip().split('\\')[-1]
+    
     try:
         if sistema == "Windows":
             cmd = "wmic cpu get name"
             raw = subprocess.check_output(cmd, shell=True).decode().strip().split('\n')
             cpu = raw[1].strip() if len(raw) > 1 else platform.processor()
-        elif sistema == "Darwin":
-            cmd = "sysctl -n machdep.cpu.brand_string"
-            cpu = subprocess.check_output(cmd, shell=True).decode().strip()
         else:
-            cmd = "grep 'model name' /proc/cpuinfo | head -n 1"
-            cpu = subprocess.check_output(cmd, shell=True).decode().split(":")[1].strip()
-    except:
-        cpu = "CPU Desconocida"
+            cpu = platform.processor()
+    except: cpu = "Generic CPU"
 
     ram_t = f"{round(psutil.virtual_memory().total / (1024**3))}GB"
-    ruta = "C:" if sistema == "Windows" else "/"
-    disk_t = f"{round(psutil.disk_usage(ruta).total / (1024**3))}GB"
-    
-    return cpu[:18].strip(), ram_t, disk_t
+    return cpu[:18], ram_t, user
 
 def enviar_datos():
-    cpu_mod, ram_t, disk_t = obtener_info_fija()
+    cpu_mod, ram_t, usuario = obtener_info_fija()
     esp = None
-    ruta_disco = "C:" if platform.system() == "Windows" else "/"
-
-    print(f"Iniciando Diagnóstico con Batería en {platform.system()}...")
+    start_time = psutil.boot_time()
 
     while True:
-        # 1. Obtener métricas básicas
+        # Métricas principales
         cpu_p = int(psutil.cpu_percent())
         ram_p = int(psutil.virtual_memory().percent)
-        disk_p = int(psutil.disk_usage(ruta_disco).percent)
-
-        # 2. Obtener estado de batería
+        
+        # Batería: Nivel, Carga y Salud
         bateria = psutil.sensors_battery()
-        if bateria:
-            bat_p = int(bateria.percent)
-            cargando = bateria.power_plugged
-        else:
-            bat_p = 0
-            cargando = False
+        bat_p = bateria.percent if bateria else 0
+        cargando = bateria.power_plugged if bateria else False
+        salud_bat = obtener_salud_bateria()
+        
+        # Tiempo de actividad (Uptime)
+        uptime = str(datetime.timedelta(seconds=int(time.time() - start_time)))
 
-        # 3. ENVIAR A FIREBASE
         payload = {
-            "info": {"cpu_mod": cpu_mod, "ram_t": ram_t, "disk_t": disk_t},
+            "info": {
+                "cpu_mod": cpu_mod, 
+                "ram_t": ram_t, 
+                "user": usuario,
+                "uptime": uptime
+            },
             "stats": {
                 "cpu": cpu_p, 
                 "ram": ram_p, 
-                "disk": disk_p,
                 "bat": bat_p,
+                "bat_health": salud_bat,
                 "charging": cargando
             },
-            "status": "Online",
             "time": time.strftime("%H:%M:%S")
         }
+
         try:
             requests.put(URL_WEB, json=payload, timeout=1.5)
-        except:
-            pass
+        except: pass
 
-        # 4. ENVIAR AL ESP8266 (Serial)
-        if esp is None:
-            puertos = serial.tools.list_ports.comports()
-            for p in puertos:
-                if any(x in p.description.upper() for x in ["CH340", "CP210", "USB"]):
-                    try:
-                        esp = serial.Serial(port=p.device, baudrate=115200, timeout=1)
-                        time.sleep(2)
-                        esp.write(bytes(f"INV:{cpu_mod},{ram_t},{disk_t}\n", 'utf-8'))
-                    except: esp = None
-
+        # Comunicación Serial (ESP8266)
         if esp:
             try:
-                # Trama extendida: MON:cpu,ram,disk,bat
-                esp.write(bytes(f"MON:{cpu_p},{ram_p},{disk_p},{bat_p}\n", 'utf-8'))
+                esp.write(bytes(f"MON:{cpu_p},{ram_p},{bat_p}\n", 'utf-8'))
             except: esp = None
+        else:
+            # Intento de reconexión simplificado
+            for p in serial.tools.list_ports.comports():
+                if "USB" in p.description.upper() or "CH340" in p.description.upper():
+                    try:
+                        esp = serial.Serial(port=p.device, baudrate=115200, timeout=1)
+                    except: pass
 
         time.sleep(1)
 
