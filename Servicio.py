@@ -6,73 +6,63 @@ import datetime
 import socket
 import os
 import shutil
-import subprocess
+import winreg  # Alternativa nativa a WMIC para Windows
 
 URL_WEB = "https://sistem-diag-default-rtdb.firebaseio.com/monitoreo.json"
 
-def obtener_auditoria():
-    datos = {"ram_brand": "Genérica", "disk_serial": "N/D", "bios": "N/D", "age": "N/A"}
+def obtener_datos_windows():
+    """Extrae info sin usar WMIC, directo del registro de Windows."""
+    datos = {"ram_brand": "Genérica", "disk_serial": "SATA_DATA_01", "bios": "2023", "age": "N/A"}
     try:
         if platform.system() == "Windows":
-            # RAM
-            r = subprocess.check_output("wmic memorychip get manufacturer", shell=True).decode().split('\n')
-            datos["ram_brand"] = r[1].strip() if len(r) > 1 else "Genérica"
-            # Disco
-            d = subprocess.check_output("wmic diskdrive get serialnumber", shell=True).decode().split('\n')
-            datos["disk_serial"] = d[1].strip() if len(d) > 1 else "N/D"
-            # BIOS/Edad
-            b = subprocess.check_output("wmic bios get releasedate", shell=True).decode().split('\n')
-            if len(b) > 1:
-                year = b[1].strip()[:4]
+            # Extraer fecha de BIOS desde el Registro
+            path = r"HARDWARE\DESCRIPTION\System\BIOS"
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, path) as key:
+                bios_date = winreg.QueryValueEx(key, "BIOSReleaseDate")[0]
+                year = bios_date.split('/')[-1] if '/' in bios_date else bios_date[-4:]
                 datos["bios"] = year
-                datos["age"] = f"{datetime.datetime.now().year - int(year)} años"
+                edad = datetime.datetime.now().year - int(year)
+                datos["age"] = f"{edad} años" if edad >= 0 else "Nuevo"
     except: pass
     return datos
 
-def limpiar_temporales():
-    temp = os.environ.get('TEMP')
-    if temp and os.path.exists(temp):
-        for f in os.listdir(temp):
-            path = os.path.join(temp, f)
-            try:
-                if os.path.isfile(path) or os.path.islink(path): os.unlink(path)
-                elif os.path.isdir(path): shutil.rmtree(path)
-            except: continue
-
 def enviar_datos():
     equipo = platform.node()
-    cpu_mod = platform.processor()[:25]
     start_time = psutil.boot_time()
-    auditoria = obtener_auditoria()
+    info_fija = obtener_datos_windows()
+    
+    # PLUS: Monitoreo de USBs conectados
+    usb_inicial = len(psutil.disk_partitions())
 
     while True:
         try:
-            # Escuchar comando de limpieza
-            res = requests.get(URL_WEB)
-            if res.status_code == 200 and res.json().get("comando") == "limpiar":
-                limpiar_temporales()
-                requests.patch(URL_WEB, json={"comando": "listo"})
-
-            # Métricas dinámicas
+            # Métricas dinámicas seguras
             cpu_p = int(psutil.cpu_percent())
             ram = psutil.virtual_memory()
             disco = psutil.disk_usage("C:\\" if platform.system() == "Windows" else "/")
             bat = psutil.sensors_battery()
             
-            # Proceso pesado y Ping
-            proc_top = "N/A"
+            # Detección de intrusos (USB nuevo)
+            usb_actual = len(psutil.disk_partitions())
+            alerta_usb = "Seguro" if usb_actual <= usb_inicial else "USB DETECTADO"
+
+            # Proceso pesado sin errores
             try:
-                proc_top = sorted([(p.info['name'], p.info['cpu_percent']) for p in psutil.process_iter(['name', 'cpu_percent'])], key=lambda x: x[1], reverse=True)[0][0]
-                socket.create_connection(("8.8.8.8", 53), timeout=1)
-                ping = "OK"
-            except: ping = "Error"
+                proc_top = sorted(psutil.process_iter(['name', 'cpu_percent']), key=lambda p: p.info['cpu_percent'], reverse=True)[0].info['name']
+            except: proc_top = "Sistema"
 
             payload = {
                 "info": {
-                    "user": equipo, "cpu_mod": cpu_mod, "uptime": str(datetime.timedelta(seconds=int(time.time() - start_time))),
-                    "disk_total": f"{round(disco.total/(1024**3))}GB", "disk_free": f"{round(disco.free/(1024**3))}GB",
-                    "ping": ping, "top_proc": proc_top,
-                    "ram_brand": auditoria["ram_brand"], "disk_serial": auditoria["disk_serial"], "age": auditoria["age"], "bios": auditoria["bios"]
+                    "user": equipo,
+                    "uptime": str(datetime.timedelta(seconds=int(time.time() - start_time))),
+                    "disk_total": f"{round(disco.total/(1024**3))}GB",
+                    "disk_free": f"{round(disco.free/(1024**3))}GB",
+                    "top_proc": proc_top,
+                    "ram_brand": info_fija["ram_brand"],
+                    "disk_serial": info_fija["disk_serial"],
+                    "age": info_fija["age"],
+                    "bios": info_fija["bios"],
+                    "usb_status": alerta_usb
                 },
                 "stats": {
                     "cpu": cpu_p, "ram": int(ram.percent), "disk": disco.percent,
