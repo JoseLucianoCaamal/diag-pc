@@ -1,4 +1,4 @@
-# 🚀 SistemDiag: Mobile PC Diagnostic Suite
+# 🚀 CloudLink Hardware: Mobile PC Diagnostic Suite
 
 ### *Hardware Monitoring & Real-Time Analytics Platform*
 
