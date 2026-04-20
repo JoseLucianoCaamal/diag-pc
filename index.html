@@ -2,191 +2,93 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SistemDiag Ultimate | Auditoría & Salud</title>
+    <title>SistemDiag Ultimate Pro</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root {
-            --bg: #0f172a;
-            --card: #1e293b;
-            --accent: #38bdf8;
-            --good: #4ade80;
-            --warn: #fbbf24;
-            --bad: #f87171;
-            --text-main: #f8fafc;
-            --text-dim: #94a3b8;
-        }
-
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background-color: var(--bg);
-            color: var(--text-main);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-        }
-
-        .container { width: 100%; max-width: 1000px; }
-
-        /* Encabezado */
-        .header {
-            background: var(--card);
-            padding: 25px;
-            border-radius: 20px;
-            margin-bottom: 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-left: 8px solid var(--accent);
-            box-shadow: 0 10px 15px rgba(0,0,0,0.3);
-        }
-
-        .user-info h1 { margin: 0; font-size: 1.6rem; }
-        .top-proc-tag { color: var(--warn); font-size: 0.85rem; font-weight: bold; background: #000; padding: 2px 8px; border-radius: 5px; }
-
-        .btn-clean {
-            background: var(--accent); color: #0f172a; border: none; padding: 12px 20px;
-            border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.3s;
-        }
-        .btn-clean:hover { background: var(--good); transform: scale(1.05); }
-
-        /* Grid de Salud */
-        .grid-salud {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px;
-            margin-bottom: 25px;
-        }
-
-        .card { background: var(--card); padding: 25px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); }
-        .card-title { font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 10px; }
-        .val-main { font-size: 2.2rem; font-weight: 800; display: block; }
+        :root { --bg: #0b0f1a; --card: #161b2a; --accent: #38bdf8; --good: #4ade80; --warn: #fbbf24; --bad: #f87171; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; }
         
-        .progress-bar { background: #334155; height: 8px; border-radius: 4px; margin: 15px 0; overflow: hidden; }
-        .progress-fill { height: 100%; width: 0%; transition: 1s ease-in-out; }
+        .header { background: var(--card); padding: 25px; border-radius: 20px; border-left: 8px solid var(--accent); display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .btn-clean { background: var(--accent); color: #000; border: none; padding: 12px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; }
 
-        /* Ficha Técnica y Seguridad */
-        .ficha {
-            background: #111827;
-            padding: 30px;
-            border-radius: 25px;
-            border: 2px dashed var(--accent);
-        }
+        .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 25px; }
+        .card { background: var(--card); padding: 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); }
+        .progress-bar { background: #334155; height: 10px; border-radius: 5px; margin: 15px 0; overflow: hidden; }
+        .progress-fill { height: 100%; transition: 1s; width: 0%; }
 
-        .ficha-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #1e293b; padding-bottom: 15px; }
-        .ficha-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #1e293b; }
-        .label { color: var(--text-dim); font-size: 0.9rem; }
-        .value { color: var(--accent); font-weight: bold; }
-
-        .usb-badge { padding: 5px 15px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
-        .seguro { background: #059669; color: white; }
-        .peligro { background: var(--bad); color: white; animation: flash 1s infinite; }
-
-        @keyframes flash { 50% { opacity: 0.5; } }
+        .ficha-forense { background: #000; padding: 25px; border-radius: 20px; border: 2px dashed var(--accent); }
+        .ficha-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1e293b; font-size: 0.9rem; }
+        .label { color: #64748b; } .value { color: var(--accent); font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header">
-        <div class="user-info">
-            <h1 id="user-name">CONECTANDO...</h1>
-            <div style="margin-top:8px">
-                <span class="label">Proceso más pesado:</span> <span id="top-proc" class="top-proc-tag">...</span>
-            </div>
+        <div>
+            <h1 id="user-name" style="margin:0">DETECTANDO...</h1>
+            <span style="font-size:0.85rem; color:var(--warn)">PROCESO TOP: <b id="top-proc">---</b></span>
         </div>
-        <button class="btn-clean" onclick="ejecutarLimpieza()">
-            <i class="fas fa-broom"></i> OPTIMIZAR SISTEMA
-        </button>
-    </div>
-
-    <div class="grid-salud">
-        <div class="card">
-            <span class="card-title">Cerebro (CPU)</span>
-            <span id="cpu-val" class="val-main">0%</span>
-            <div class="progress-bar"><div id="cpu-fill" class="progress-fill" style="background: var(--accent);"></div></div>
-        </div>
-        <div class="card">
-            <span class="card-title">Memoria (RAM)</span>
-            <span id="ram-val" class="val-main">0%</span>
-            <div class="progress-bar"><div id="ram-fill" class="progress-fill" style="background: var(--warn);"></div></div>
-        </div>
-        <div class="card">
-            <span class="card-title">Disco (Uso)</span>
-            <span id="disk-val" class="val-main">0%</span>
-            <div class="progress-bar"><div id="disk-fill" class="progress-fill" style="background: white;"></div></div>
-        </div>
-        <div class="card">
-            <span class="card-title">Energía</span>
-            <span id="bat-val" class="val-main">0%</span>
-            <div class="progress-bar"><div id="bat-fill" class="progress-fill" style="background: var(--good);"></div></div>
+        <div style="text-align:right">
+            <div id="net-val" style="font-size:0.8rem; margin-bottom:10px"><i class="fas fa-network-wired"></i> Red: 0 Mbps</div>
+            <button class="btn-clean" onclick="limpiar()"><i class="fas fa-broom"></i> OPTIMIZAR PC</button>
         </div>
     </div>
 
-    <div class="ficha">
-        <div class="ficha-header">
-            <h2 style="margin:0"><i class="fas fa-microchip"></i> Auditoría de Hardware</h2>
-            <span id="usb-status" class="usb-badge seguro">SISTEMA SEGURO</span>
-        </div>
-        
-        <div class="ficha-row"><span class="label">Marca de Memoria:</span> <span id="f-ram" class="value">---</span></div>
-        <div class="ficha-row"><span class="label">Número de Serie Disco:</span> <span id="f-disk" class="value">---</span></div>
-        <div class="ficha-row"><span class="label">Fabricación BIOS:</span> <span id="f-bios" class="value">---</span></div>
-        <div class="ficha-row"><span class="label">Capacidad Real:</span> <span id="f-space" class="value">---</span></div>
-        <div class="ficha-row"><span class="label">Edad Estimada:</span> <span id="f-age" style="padding:2px 10px; border-radius:10px; font-weight:bold;">---</span></div>
+    <div class="grid-stats">
+        <div class="card"><span>CPU</span><div id="cpu-val" style="font-size:2rem; font-weight:bold">0%</div><div class="progress-bar"><div id="cpu-fill" class="progress-fill" style="background:var(--accent)"></div></div></div>
+        <div class="card"><span>RAM</span><div id="ram-val" style="font-size:2rem; font-weight:bold">0%</div><div class="progress-bar"><div id="ram-fill" class="progress-fill" style="background:var(--warn)"></div></div></div>
+        <div class="card"><span>DISCO</span><div id="disk-val" style="font-size:2rem; font-weight:bold">0%</div><div class="progress-bar"><div id="disk-fill" class="progress-fill" style="background:#fff"></div></div></div>
+        <div class="card"><span>BATERÍA</span><div id="bat-val" style="font-size:2rem; font-weight:bold">0%</div><div class="progress-bar"><div id="bat-fill" class="progress-fill" style="background:var(--good)"></div></div></div>
+    </div>
+
+    <div class="ficha-forense">
+        <h3 style="margin-top:0; color:var(--accent)"><i class="fas fa-search-plus"></i> INFORME DE AUDITORÍA FORENSE</h3>
+        <div class="ficha-row"><span class="label">Año de Fabricación (BIOS):</span> <span class="value" id="f-bios">---</span></div>
+        <div class="ficha-row"><span class="label">Edad del Hardware:</span> <span id="f-age" style="padding:2px 10px; border-radius:10px; color:#fff">---</span></div>
+        <div class="ficha-row"><span class="label">Almacenamiento Total:</span> <span class="value" id="f-space">---</span></div>
+        <div class="ficha-row"><span class="label">Integridad Física (Errores):</span> <span id="f-errors" class="value">0 detectados</span></div>
+        <div class="ficha-row"><span class="label">Tiempo de Actividad:</span> <span class="value" id="f-uptime">00:00:00</span></div>
     </div>
 </div>
 
 <script>
-    const db = "https://sistem-diag-default-rtdb.firebaseio.com/monitoreo.json";
-
-    async function ejecutarLimpieza() {
-        await fetch(db, { method: 'PATCH', body: JSON.stringify({ "comando": "limpiar" }) });
-        alert("Orden de limpieza enviada a la PC.");
+    async function limpiar() {
+        await fetch("https://sistem-diag-default-rtdb.firebaseio.com/monitoreo.json", {method:'PATCH', body: JSON.stringify({"comando":"limpiar"})});
+        alert("Comando de optimización enviado.");
     }
 
     async function update() {
         try {
-            const res = await fetch(db);
+            const res = await fetch("https://sistem-diag-default-rtdb.firebaseio.com/monitoreo.json");
             const d = await res.json();
-            if(!d) return;
-
-            // Datos Header
+            
             document.getElementById('user-name').innerText = "EQUIPO: " + d.info.user;
             document.getElementById('top-proc').innerText = d.info.top_proc || "Sistema";
+            document.getElementById('net-val').innerHTML = `<i class="fas fa-network-wired"></i> Red: ${d.info.net_speed}`;
 
-            // Gráficas
-            document.getElementById('cpu-val').innerText = d.stats.cpu + "%";
-            document.getElementById('cpu-fill').style.width = d.stats.cpu + "%";
-            document.getElementById('ram-val').innerText = d.stats.ram + "%";
-            document.getElementById('ram-fill').style.width = d.stats.ram + "%";
-            document.getElementById('disk-val').innerText = d.stats.disk + "%";
-            document.getElementById('disk-fill').style.width = d.stats.disk + "%";
-            document.getElementById('bat-val').innerText = d.stats.bat + "%";
-            document.getElementById('bat-fill').style.width = d.stats.bat + "%";
+            // Actualizar Barras
+            const metrics = ['cpu', 'ram', 'disk', 'bat'];
+            metrics.forEach(m => {
+                document.getElementById(`${m}-val`).innerText = d.stats[m] + "%";
+                document.getElementById(`${m}-fill`).style.width = d.stats[m] + "%";
+            });
 
-            // Ficha Técnica (Corrigiendo Undefined)
-            document.getElementById('f-ram').innerText = d.info.ram_brand || "Genérica";
-            document.getElementById('f-disk').innerText = d.info.disk_serial || "SATA_01";
-            document.getElementById('f-bios').innerText = d.info.bios || "N/D";
+            // Ficha Forense
+            document.getElementById('f-bios').innerText = d.info.bios;
             document.getElementById('f-space').innerText = `${d.info.disk_free} libres de ${d.info.disk_total}`;
+            document.getElementById('f-uptime').innerText = d.info.uptime;
+            document.getElementById('f-errors').innerText = d.info.disk_errors + " errores físicos";
+            document.getElementById('f-errors').style.color = d.info.disk_errors > 0 ? "var(--bad)" : "var(--good)";
             
-            // Edad y Garantía
             const ageBadge = document.getElementById('f-age');
-            ageBadge.innerText = d.info.age || "---";
+            ageBadge.innerText = d.info.age;
             ageBadge.style.background = parseInt(d.info.age) <= 2 ? "#059669" : "#b91c1c";
 
-            // Seguridad USB
-            const usb = document.getElementById('usb-status');
-            usb.innerText = d.info.usb_status || "Seguro";
-            usb.className = d.info.usb_status === "Seguro" ? "usb-badge seguro" : "usb-badge peligro";
-
-        } catch(e) { console.log("Sincronizando..."); }
+        } catch(e) {}
     }
-
     setInterval(update, 1000);
 </script>
-
 </body>
 </html>
