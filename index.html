@@ -2,106 +2,108 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>SistemDiag | Inventario PRO</title>
+    <title>SistemDiag Ultimate | Auditoría & Salud</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --text: #f8fafc; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
-        .container { max-width: 900px; margin: auto; }
+        :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --good: #4ade80; --warn: #fbbf24; --text: #f8fafc; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; }
         
-        /* Estilo Ficha Técnica */
-        .ficha-tecnica {
-            background: var(--card);
-            border-radius: 20px;
-            padding: 25px;
-            margin-top: 25px;
-            border: 1px solid rgba(56, 189, 248, 0.2);
-        }
-        .ficha-header { 
-            display: flex; align-items: center; gap: 15px; 
-            border-bottom: 1px solid #334155; padding-bottom: 15px; margin-bottom: 20px;
-        }
-        .item-pro {
-            display: flex; justify-content: space-between;
-            padding: 12px 0; border-bottom: 1px ridge rgba(255,255,255,0.05);
-        }
-        .label-pro { color: #94a3b8; font-size: 0.9rem; }
-        .val-pro { font-weight: bold; color: var(--accent); }
-        
-        .badge-age {
-            padding: 4px 12px; border-radius: 20px; font-size: 0.75rem;
-            background: #334155; color: #fff;
-        }
+        /* Header */
+        .header { background: var(--card); padding: 25px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; border-left: 8px solid var(--accent); margin-bottom: 20px; }
+        .btn-clean { background: var(--accent); color: #000; border: none; padding: 10px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+
+        /* Grid Salud */
+        .grid-salud { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .card { background: var(--card); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05); }
+        .progress-bar { background: #334155; height: 8px; border-radius: 4px; margin: 10px 0; overflow: hidden; }
+        .progress-fill { height: 100%; transition: 1s; width: 0%; }
+
+        /* Ficha Técnica */
+        .ficha { background: #111827; border-radius: 20px; padding: 25px; border: 1px dashed var(--accent); }
+        .ficha-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1e293b; font-size: 0.9rem; }
+        .label { color: #64748b; }
+        .value { color: var(--accent); font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header">
-        <h1 id="user-name">Cargando...</h1>
+        <div>
+            <h1 id="user-name" style="margin:0">DETECTANDO...</h1>
+            <span style="font-size:0.8rem; color:var(--warn)">PROCESO TOP: <b id="top-proc">---</b></span>
+        </div>
+        <button class="btn-clean" onclick="limpiar()"><i class="fas fa-broom"></i> OPTIMIZAR PC</button>
     </div>
 
-    <div class="ficha-tecnica">
-        <div class="ficha-header">
-            <i class="fas fa-clipboard-list fa-2x" style="color: var(--accent);"></i>
-            <div>
-                <h2 style="margin:0">Ficha Técnica de Auditoría</h2>
-                <span style="font-size: 0.8rem; color: #666;">DATOS EXTRAÍDOS DEL HARDWARE</span>
-            </div>
+    <div class="grid-salud">
+        <div class="card">
+            <span>CEREBRO (CPU)</span>
+            <div id="cpu-val" style="font-size:1.5rem; font-weight:bold">0%</div>
+            <div class="progress-bar"><div id="cpu-fill" class="progress-fill" style="background:var(--accent)"></div></div>
         </div>
+        <div class="card">
+            <span>MEMORIA (RAM)</span>
+            <div id="ram-val" style="font-size:1.5rem; font-weight:bold">0%</div>
+            <div class="progress-bar"><div id="ram-fill" class="progress-fill" style="background:var(--warn)"></div></div>
+        </div>
+        <div class="card">
+            <span>DISCO (USO)</span>
+            <div id="disk-val" style="font-size:1.5rem; font-weight:bold">0%</div>
+            <div class="progress-bar"><div id="disk-fill" class="progress-fill" style="background:#fff"></div></div>
+        </div>
+        <div class="card">
+            <span>BATERÍA</span>
+            <div id="bat-val" style="font-size:1.5rem; font-weight:bold">0%</div>
+            <div class="progress-bar"><div id="bat-fill" class="progress-fill" style="background:var(--good)"></div></div>
+        </div>
+    </div>
 
-        <div class="item-pro">
-            <span class="label-pro"><i class="fas fa-microchip"></i> Marca de RAM:</span>
-            <span id="ram-brand" class="val-pro">---</span>
-        </div>
-
-        <div class="item-pro">
-            <span class="label-pro"><i class="fas fa-fingerprint"></i> S/N Disco:</span>
-            <span id="disk-serial" class="val-pro">---</span>
-        </div>
-
-        <div class="item-pro">
-            <span class="label-pro"><i class="fas fa-calendar-alt"></i> Año de Fabricación:</span>
-            <span id="bios-date" class="val-pro">---</span>
-        </div>
-
-        <div class="item-pro">
-            <span class="label-pro"><i class="fas fa-shield-alt"></i> Estado de Garantía:</span>
-            <span id="age-status" class="badge-age">Estimando...</span>
-        </div>
+    <div class="ficha">
+        <h3 style="margin-top:0"><i class="fas fa-microchip"></i> INVENTARIO DE HARDWARE PROFESIONAL</h3>
+        <div class="ficha-row"><span class="label">Marca de Memoria RAM:</span> <span class="value" id="f-ram">---</span></div>
+        <div class="ficha-row"><span class="label">S/N de Almacenamiento:</span> <span class="value" id="f-disk">---</span></div>
+        <div class="ficha-row"><span class="label">Año de Fabricación (BIOS):</span> <span class="value" id="f-bios">---</span></div>
+        <div class="ficha-row"><span class="label">Espacio Real:</span> <span class="value" id="f-space">---</span></div>
+        <div class="ficha-row"><span class="label">Edad del Equipo:</span> <span id="f-age" style="padding:2px 10px; border-radius:10px; font-size:0.8rem">---</span></div>
     </div>
 </div>
 
 <script>
+    async function limpiar() {
+        await fetch("https://sistem-diag-default-rtdb.firebaseio.com/monitoreo.json", {method:'PATCH', body: JSON.stringify({"comando":"limpiar"})});
+        alert("Orden de limpieza enviada.");
+    }
+
     async function update() {
         try {
             const res = await fetch("https://sistem-diag-default-rtdb.firebaseio.com/monitoreo.json");
             const d = await res.json();
             
-            document.getElementById('user-name').innerText = "EQUIPO: " + d.info.user;
+            document.getElementById('user-name').innerText = d.info.user;
+            document.getElementById('top-proc').innerText = d.info.top_proc;
+
+            // Barras y Porcentajes
+            const stats = [['cpu', 'accent'], ['ram', 'warn'], ['disk', 'white'], ['bat', 'good']];
+            stats.forEach(s => {
+                document.getElementById(`${s[0]}-val`).innerText = d.stats[s[0]] + "%";
+                document.getElementById(`${s[0]}-fill`).style.width = d.stats[s[0]] + "%";
+            });
+
+            // Ficha Técnica
+            document.getElementById('f-ram').innerText = d.info.ram_brand;
+            document.getElementById('f-disk').innerText = d.info.disk_serial;
+            document.getElementById('f-bios').innerText = d.info.bios;
+            document.getElementById('f-space').innerText = `${d.info.disk_free} libres de ${d.info.disk_total}`;
             
-            // Llenar Ficha Técnica
-            document.getElementById('ram-brand').innerText = d.info.ram_brand;
-            document.getElementById('disk-serial').innerText = d.info.disk_serial;
-            document.getElementById('bios-date').innerText = d.info.bios;
-            
-            // Lógica de Garantía (Algoritmo de edad)
-            const ageText = d.info.age;
-            const badge = document.getElementById('age-status');
-            badge.innerText = ageText;
-            
-            const numAge = parseInt(ageText);
-            if(numAge <= 2) {
-                badge.style.background = "#059669"; // Verde (Vigente)
-                badge.innerText += " - PROBABLE GARANTÍA";
-            } else {
-                badge.style.background = "#b91c1c"; // Rojo (Expirada)
-                badge.innerText += " - FUERA DE GARANTÍA";
-            }
+            const ageBadge = document.getElementById('f-age');
+            ageBadge.innerText = d.info.age;
+            ageBadge.style.background = parseInt(d.info.age) <= 2 ? "#059669" : "#b91c1c";
 
         } catch(e) {}
     }
-    setInterval(update, 2000);
+    setInterval(update, 1000);
 </script>
 </body>
 </html>
