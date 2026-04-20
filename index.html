@@ -10,6 +10,7 @@
         :root {
             --primary: #00d4ff;
             --secondary: #ff0055;
+            --charging: #00ff88;
             --bg: #0b0e14;
             --card-bg: #151921;
             --border: #252a34;
@@ -23,7 +24,6 @@
             display: flex; flex-direction: column; align-items: center;
         }
 
-        /* Información de Hardware con estilo de Terminal */
         .hw-info {
             background: rgba(0, 212, 255, 0.05);
             padding: 15px 40px;
@@ -36,28 +36,26 @@
         }
 
         .container {
-            display: flex; justify-content: center; flex-wrap: wrap; gap: 20px;
+            display: flex; justify-content: center; flex-wrap: wrap; gap: 15px;
             margin-bottom: 30px;
         }
 
         .card {
             background: var(--card-bg);
-            width: 220px; padding: 25px;
+            width: 180px; padding: 20px;
             border-radius: 10px; border: 1px solid var(--border);
             text-align: center;
         }
 
-        .percentage { font-size: 2.5rem; font-weight: bold; color: var(--primary); }
-        .label { font-size: 0.7rem; color: #666; letter-spacing: 2px; margin-top: 10px; }
+        .percentage { font-size: 2.2rem; font-weight: bold; color: var(--primary); }
+        .label { font-size: 0.65rem; color: #666; letter-spacing: 2px; margin-top: 10px; }
 
-        /* Contenedor de la Gráfica */
         .chart-container {
             background: var(--card-bg);
-            width: 90%; max-width: 900px;
+            width: 95%; max-width: 900px;
             padding: 20px;
             border-radius: 10px;
             border: 1px solid var(--border);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
         .status-dot {
@@ -69,16 +67,12 @@
             animation: pulse 1.5s infinite;
         }
 
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.3; }
-            100% { opacity: 1; }
-        }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
 
-    <h2 style="color: var(--primary); letter-spacing: 5px;">> SYSTEM_DIAG_OS_V3</h2>
+    <h2 style="color: var(--primary); letter-spacing: 5px;">> SYSTEM_DIAG_V4</h2>
     
     <div class="hw-info">
         <span><i class="fas fa-microchip"></i> <span id="cpu_mod">SEARCHING...</span></span>
@@ -99,6 +93,10 @@
             <div id="disk-val" class="percentage">0%</div>
             <div class="label">DISK_STATUS</div>
         </div>
+        <div class="card">
+            <div id="bat-val" class="percentage">0%</div>
+            <div class="label" id="bat-label">BATTERY_LIFE</div>
+        </div>
     </div>
 
     <div class="chart-container">
@@ -106,40 +104,26 @@
     </div>
 
     <div style="margin-top: 20px; font-size: 0.7rem; color: #444;">
-        <span class="status-dot"></span> LIVE_DATA_STREAM_ON_PORT_80
+        <span class="status-dot"></span> LIVE_DATA_STREAM
     </div>
 
     <script>
         const dbUrl = "https://sistem-diag-default-rtdb.firebaseio.com/monitoreo.json";
-        
-        // CONFIGURACIÓN DE LA GRÁFICA
         const ctx = document.getElementById('realtimeChart').getContext('2d');
         const chart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: [], // Aquí irán los segundos
+                labels: [],
                 datasets: [{
-                    label: 'CPU %',
-                    borderColor: '#00d4ff',
-                    borderWidth: 2,
-                    data: [],
-                    fill: false,
-                    tension: 0.4
+                    label: 'CPU %', borderColor: '#00d4ff', data: [], fill: false, tension: 0.4
                 }, {
-                    label: 'RAM %',
-                    borderColor: '#ff0055',
-                    borderWidth: 2,
-                    data: [],
-                    fill: false,
-                    tension: 0.4
+                    label: 'RAM %', borderColor: '#ff0055', data: [], fill: false, tension: 0.4
+                }, {
+                    label: 'BAT %', borderColor: '#00ff88', data: [], fill: false, tension: 0.4
                 }]
             },
             options: {
-                responsive: true,
-                scales: {
-                    y: { min: 0, max: 100, grid: { color: '#222' } },
-                    x: { grid: { display: false } }
-                },
+                scales: { y: { min: 0, max: 100, grid: { color: '#222' } }, x: { grid: { display: false } } },
                 plugins: { legend: { labels: { color: '#fff' } } }
             }
         });
@@ -150,29 +134,33 @@
                 const data = await res.json();
                 if(!data) return;
 
-                // Texto
                 document.getElementById('cpu_mod').innerText = data.info.cpu_mod;
                 document.getElementById('ram_t').innerText = data.info.ram_t;
                 document.getElementById('disk_t').innerText = data.info.disk_t;
+                
                 document.getElementById('cpu-val').innerText = data.stats.cpu + "%";
                 document.getElementById('ram-val').innerText = data.stats.ram + "%";
                 document.getElementById('disk-val').innerText = data.stats.disk + "%";
+                
+                // Lógica de Batería
+                const batVal = document.getElementById('bat-val');
+                batVal.innerText = data.stats.bat + "%";
+                batVal.style.color = data.stats.charging ? "var(--charging)" : "var(--primary)";
+                document.getElementById('bat-label').innerText = data.stats.charging ? "BATTERY_CHARGING" : "BATTERY_LEVEL";
 
-                // Actualizar Gráfica
                 const now = data.time;
                 if (chart.data.labels.length > 20) {
                     chart.data.labels.shift();
-                    chart.data.datasets[0].data.shift();
-                    chart.data.datasets[1].data.shift();
+                    chart.data.datasets.forEach(d => d.data.shift());
                 }
                 chart.data.labels.push(now);
                 chart.data.datasets[0].data.push(data.stats.cpu);
                 chart.data.datasets[1].data.push(data.stats.ram);
-                chart.update('none'); // Update sin animaciones bruscas
+                chart.data.datasets[2].data.push(data.stats.bat);
+                chart.update('none');
 
             } catch (e) { console.error(e); }
         }
-
         setInterval(update, 1000);
     </script>
 </body>
