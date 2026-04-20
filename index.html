@@ -1,108 +1,41 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SistemDiag PRO | Hardware Terminal</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --primary: #00d4ff; --secondary: #ff0055; --success: #00ff88;
-            --bg: #0b0e14; --card-bg: #151921; --border: #252a34;
-        }
-        body {
-            font-family: 'Consolas', monospace; background: var(--bg); color: #fff;
-            margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center;
-        }
-        .header { width: 100%; max-width: 900px; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-        
-        .main-grid {
-            display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; width: 100%; max-width: 900px; margin-bottom: 20px;
-        }
-        .card {
-            background: var(--card-bg); padding: 15px; border-radius: 5px; border: 1px solid var(--border); text-align: center;
-        }
-        .val { font-size: 2rem; font-weight: bold; margin: 5px 0; }
-        .label { font-size: 0.6rem; color: #555; letter-spacing: 1px; }
-
-        .console-container {
-            width: 100%; max-width: 900px; display: grid; grid-template-columns: 1.5fr 1fr; gap: 15px;
-        }
-        .terminal {
-            background: #000; border: 1px solid var(--border); height: 300px; padding: 15px; overflow-y: hidden; position: relative;
-        }
-        .terminal-header { font-size: 0.7rem; color: var(--primary); margin-bottom: 10px; border-bottom: 1px solid #111; padding-bottom: 5px; }
-        #log { font-size: 0.8rem; color: var(--success); line-height: 1.5; }
-
-        .health-box { display: flex; flex-direction: column; gap: 10px; }
-        .health-item { background: #1a1f29; padding: 10px; border-radius: 4px; display: flex; justify-content: space-between; font-size: 0.8rem; }
-        .status-tag { color: var(--success); font-weight: bold; }
-    </style>
-</head>
-<body>
-
-    <div class="header">
-        <span style="color: var(--primary); font-weight: bold;">[ SISTEM_DIAG_V4 ]</span>
-        <span id="user-tag" style="font-size: 0.8rem; color: #666;">USER: ---</span>
+<div class="main-grid">
+    <div class="card">
+        <div class="label">CPU LOAD</div>
+        <div id="cpu-p" class="val" style="color:var(--primary)">0%</div>
     </div>
-
-    <div class="main-grid">
-        <div class="card"><div class="label">CPU</div><div id="cpu-p" class="val" style="color:var(--primary)">0%</div></div>
-        <div class="card"><div class="label">RAM</div><div id="ram-p" class="val" style="color:var(--secondary)">0%</div></div>
-        <div class="card"><div class="label">BATTERY</div><div id="bat-p" class="val" style="color:var(--success)">0%</div></div>
-        <div class="card"><div class="label">HEALTH</div><div id="bat-h" class="val" style="color:#fff">--%</div></div>
+    <div class="card">
+        <div class="label">RAM USAGE</div>
+        <div id="ram-p" class="val" style="color:var(--secondary)">0%</div>
     </div>
-
-    <div class="console-container">
-        <div class="terminal">
-            <div class="terminal-header">LIVE_SYSTEM_LOG</div>
-            <div id="log"></div>
-        </div>
-        <div class="health-box">
-            <div class="health-item"><span>CPU Model:</span> <span id="cpu-m" style="color:#aaa">---</span></div>
-            <div class="health-item"><span>Total RAM:</span> <span id="ram-t" style="color:#aaa">---</span></div>
-            <div class="health-item"><span>Power Mode:</span> <span id="p-mode" class="status-tag">---</span></div>
-            <div class="health-item"><span>System Uptime:</span> <span id="uptime" style="color:var(--primary)">00:00:00</span></div>
-        </div>
+    <div class="card">
+        <div class="label">DISK USED</div>
+        <div id="disk-p" class="val" style="color:#fff">0%</div>
     </div>
+    <div class="card">
+        <div class="label">BATTERY HEALTH</div>
+        <div id="bat-h" class="val" style="color:var(--success)">--%</div>
+    </div>
+</div>
 
-    <script>
-        const logDiv = document.getElementById('log');
-        let lastCharge = null;
-
-        function addLog(msg) {
-            const time = new Date().toLocaleTimeString();
-            logDiv.innerHTML = `<div><span style="color:#444">[${time}]</span> ${msg}</div>` + logDiv.innerHTML;
-        }
-
-        async function update() {
-            try {
-                const res = await fetch("https://sistem-diag-default-rtdb.firebaseio.com/monitoreo.json");
-                const d = await res.json();
-                
-                document.getElementById('cpu-p').innerText = d.stats.cpu + "%";
-                document.getElementById('ram-p').innerText = d.stats.ram + "%";
-                document.getElementById('bat-p').innerText = d.stats.bat + "%";
-                document.getElementById('bat-h').innerText = d.stats.bat_health + "%";
-                
-                document.getElementById('cpu-m').innerText = d.info.cpu_mod;
-                document.getElementById('ram-t').innerText = d.info.ram_t;
-                document.getElementById('user-tag').innerText = "USER: " + d.info.user;
-                document.getElementById('uptime').innerText = d.info.uptime;
-                
-                const charging = d.stats.charging;
-                document.getElementById('p-mode').innerText = charging ? "CHARGING" : "DISCHARGING";
-                document.getElementById('p-mode').style.color = charging ? "var(--success)" : "var(--secondary)";
-
-                if(lastCharge !== null && lastCharge !== charging) {
-                    addLog(charging ? "External Power Connected" : "Running on Battery Power");
-                }
-                lastCharge = charging;
-            } catch(e) {}
-        }
-
-        addLog("Diagnostic Engine Started...");
-        setInterval(update, 1000);
-    </script>
-</body>
-</html>
+<script>
+    // En tu función update(), asegúrate de mapear bien los nuevos campos:
+    async function update() {
+        try {
+            const res = await fetch("https://sistem-diag-default-rtdb.firebaseio.com/monitoreo.json");
+            const d = await res.json();
+            
+            // Actualizar tarjetas
+            document.getElementById('cpu-p').innerText = d.stats.cpu + "%";
+            document.getElementById('ram-p').innerText = d.stats.ram + "%";
+            document.getElementById('disk-p').innerText = d.stats.disk + "%"; // Porcentaje de uso
+            document.getElementById('bat-h').innerText = d.stats.bat_health + "%"; // Salud de vida
+            
+            // Actualizar cintilla superior
+            document.getElementById('cpu_mod').innerText = d.info.cpu_mod;
+            document.getElementById('ram_t').innerText = d.info.ram_t;
+            document.getElementById('disk_t').innerText = d.info.disk_t; // Capacidad total
+            
+            // ... resto de tu lógica de logs y uptime ...
+        } catch(e) { console.log("Error de conexión"); }
+    }
+</script>
