@@ -1,41 +1,100 @@
-<div class="main-grid">
-    <div class="card">
-        <div class="label">CPU LOAD</div>
-        <div id="cpu-p" class="val" style="color:var(--primary)">0%</div>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Asistente de Salud PC</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #f8fafc; margin: 0; padding: 20px; }
+        
+        .container { max-width: 800px; margin: auto; }
+        .status-header { text-align: center; padding: 20px; background: var(--card); border-radius: 15px; margin-bottom: 20px; border-bottom: 4px solid var(--accent); }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .card { background: var(--card); padding: 20px; border-radius: 15px; text-align: center; transition: 0.3s; }
+        
+        .big-icon { font-size: 3rem; margin-bottom: 10px; }
+        .status-text { font-size: 1.5rem; font-weight: bold; display: block; }
+        .tip { font-size: 0.85rem; color: #94a3b8; margin-top: 10px; min-height: 40px; }
+
+        /* Colores Dinámicos */
+        .good { color: #4ade80; }
+        .warn { color: #fbbf24; }
+        .bad { color: #f87171; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="status-header">
+        <h1><i class="fas fa-robot"></i> Mi Asistente Virtual</h1>
+        <p id="uptime-text">Tu PC lleva encendida 00:00:00</p>
     </div>
-    <div class="card">
-        <div class="label">RAM USAGE</div>
-        <div id="ram-p" class="val" style="color:var(--secondary)">0%</div>
-    </div>
-    <div class="card">
-        <div class="label">DISK USED</div>
-        <div id="disk-p" class="val" style="color:#fff">0%</div>
-    </div>
-    <div class="card">
-        <div class="label">BATTERY HEALTH</div>
-        <div id="bat-h" class="val" style="color:var(--success)">--%</div>
+
+    <div class="grid">
+        <div class="card">
+            <div class="big-icon"><i class="fas fa-brain"></i></div>
+            <span class="label">Esfuerzo del Cerebro</span>
+            <span id="cpu-status" class="status-text">Analizando...</span>
+            <p id="cpu-tip" class="tip">Verificando si hay muchos programas abiertos.</p>
+        </div>
+
+        <div class="card">
+            <div class="big-icon"><i class="fas fa-microchip"></i></div>
+            <span class="label">Memoria de Trabajo</span>
+            <span id="ram-status" class="status-text">Analizando...</span>
+            <p id="ram-tip" class="tip">Calculando cuánto espacio queda para pensar.</p>
+        </div>
+
+        <div class="card">
+            <div class="big-icon"><i class="fas fa-folder-open"></i></div>
+            <span class="label">Espacio en Archivos</span>
+            <span id="disk-status" class="status-text">Analizando...</span>
+            <p id="disk-tip" class="tip">Revisando si tienes lugar para más fotos o videos.</p>
+        </div>
+
+        <div class="card">
+            <div class="big-icon" id="bat-icon"><i class="fas fa-battery-half"></i></div>
+            <span class="label">Energía Vital</span>
+            <span id="bat-status" class="status-text">Analizando...</span>
+            <p id="bat-tip" class="tip">Viendo si necesitas conectar el cargador pronto.</p>
+        </div>
     </div>
 </div>
 
 <script>
-    // En tu función update(), asegúrate de mapear bien los nuevos campos:
     async function update() {
         try {
             const res = await fetch("https://sistem-diag-default-rtdb.firebaseio.com/monitoreo.json");
             const d = await res.json();
-            
-            // Actualizar tarjetas
-            document.getElementById('cpu-p').innerText = d.stats.cpu + "%";
-            document.getElementById('ram-p').innerText = d.stats.ram + "%";
-            document.getElementById('disk-p').innerText = d.stats.disk + "%"; // Porcentaje de uso
-            document.getElementById('bat-h').innerText = d.stats.bat_health + "%"; // Salud de vida
-            
-            // Actualizar cintilla superior
-            document.getElementById('cpu_mod').innerText = d.info.cpu_mod;
-            document.getElementById('ram_t').innerText = d.info.ram_t;
-            document.getElementById('disk_t').innerText = d.info.disk_t; // Capacidad total
-            
-            // ... resto de tu lógica de logs y uptime ...
-        } catch(e) { console.log("Error de conexión"); }
+            const s = d.stats;
+
+            // Lógica CPU
+            const cpuStatus = document.getElementById('cpu-status');
+            if(s.cpu < 40) { cpuStatus.innerText = "Tranquilo"; cpuStatus.className="status-text good"; document.getElementById('cpu-tip').innerText="Tu PC está relajada."; }
+            else if(s.cpu < 80) { cpuStatus.innerText = "Ocupado"; cpuStatus.className="status-text warn"; document.getElementById('cpu-tip').innerText="Trabajando en varias cosas a la vez."; }
+            else { cpuStatus.innerText = "Muy Pesado"; cpuStatus.className="status-text bad"; document.getElementById('cpu-tip').innerText="¡Cierra algunas pestañas o programas!"; }
+
+            // Lógica RAM
+            const ramStatus = document.getElementById('ram-status');
+            if(s.ram < 70) { ramStatus.innerText = "Fluido"; ramStatus.className="status-text good"; document.getElementById('ram-tip').innerText="Tienes mucha memoria libre."; }
+            else { ramStatus.innerText = "Lleno"; ramStatus.className="status-text warn"; document.getElementById('ram-tip').innerText="Si abres más cosas, se pondrá lenta."; }
+
+            // Lógica Disco
+            const diskStatus = document.getElementById('disk-status');
+            if(s.disk < 85) { diskStatus.innerText = "Con Espacio"; diskStatus.className="status-text good"; document.getElementById('disk-tip').innerText="Puedes guardar lo que quieras."; }
+            else { diskStatus.innerText = "Casi Lleno"; diskStatus.className="status-text bad"; document.getElementById('disk-tip').innerText="Considera borrar archivos viejos."; }
+
+            // Lógica Batería
+            document.getElementById('bat-status').innerText = s.bat + "%";
+            document.getElementById('bat-icon').style.color = s.charging ? "#4ade80" : "#f8fafc";
+            document.getElementById('bat-tip').innerText = s.charging ? "Cargando batería..." : "Usando la reserva interna.";
+
+            document.getElementById('uptime-text').innerText = "Tu PC lleva encendida: " + d.info.uptime;
+        } catch(e) {}
     }
+    setInterval(update, 1500);
 </script>
+</body>
+</html>
