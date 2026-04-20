@@ -8,21 +8,22 @@
         :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --good: #4ade80; --warn: #fbbf24; --bad: #f87171; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #f8fafc; margin: 0; padding: 20px; }
         
-        .container { max-width: 900px; margin: auto; }
-        .header { background: var(--card); padding: 30px; border-radius: 20px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; border-left: 8px solid var(--accent); }
+        .container { max-width: 1000px; margin: auto; }
+        .header { background: var(--card); padding: 30px; border-radius: 20px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; border-left: 8px solid var(--accent); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
         
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
-        .card { background: var(--card); padding: 25px; border-radius: 20px; position: relative; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+        .card { background: var(--card); padding: 25px; border-radius: 20px; transition: transform 0.2s; }
+        .card:hover { transform: translateY(-5px); }
         
-        .card-title { font-size: 0.9rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 15px; }
+        .card-title { font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.5px; display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
         .val-main { font-size: 2.2rem; font-weight: 800; display: block; margin-bottom: 5px; }
         
-        /* Barras de progreso */
         .progress-bar { background: #334155; height: 10px; border-radius: 5px; overflow: hidden; margin: 15px 0; }
         .progress-fill { height: 100%; transition: 1s ease-in-out; width: 0%; }
         
-        .details { font-size: 0.8rem; color: #94a3b8; }
+        .details { font-size: 0.8rem; color: #94a3b8; line-height: 1.4; }
         .user-name { font-size: 1.8rem; font-weight: 900; color: #fff; }
+        .ping-tag { background: #111827; padding: 4px 8px; border-radius: 5px; font-size: 0.75rem; border: 1px solid #334155; }
     </style>
 </head>
 <body>
@@ -30,41 +31,42 @@
 <div class="container">
     <div class="header">
         <div>
-            <span style="color: var(--accent); font-weight: bold;">DISPOSITIVO DETECTADO:</span>
-            <div id="user-name" class="user-name">Cargando...</div>
+            <span style="color: var(--accent); font-weight: bold; font-size: 0.8rem;">DISPOSITIVO DETECTADO:</span>
+            <div id="user-name" class="user-name">CONECTANDO...</div>
         </div>
         <div style="text-align: right;">
-            <i class="fas fa-clock"></i> <span id="uptime">00:00:00</span>
+            <div class="ping-tag"><i class="fas fa-wifi"></i> RED: <span id="ping-val">0 ms</span></div>
+            <div id="uptime" style="margin-top: 10px; font-size: 0.9rem; color: #94a3b8;"><i class="fas fa-clock"></i> 00:00:00</div>
         </div>
     </div>
 
     <div class="grid">
         <div class="card">
-            <span class="card-title"><i class="fas fa-brain"></i> Uso del Cerebro</span>
+            <span class="card-title"><i class="fas fa-brain"></i> Cerebro</span>
             <span id="cpu-val" class="val-main">0%</span>
             <div class="progress-bar"><div id="cpu-fill" class="progress-fill" style="background: var(--accent);"></div></div>
-            <span id="cpu-status" class="details">Estado Nominal</span>
+            <span id="cpu-status" class="details">Analizando esfuerzo...</span>
         </div>
 
         <div class="card">
-            <span class="card-title"><i class="fas fa-microchip"></i> Memoria de Trabajo</span>
+            <span class="card-title"><i class="fas fa-microchip"></i> Memoria</span>
             <span id="ram-val" class="val-main">0%</span>
             <div class="progress-bar"><div id="ram-fill" class="progress-fill" style="background: var(--warn);"></div></div>
-            <span id="ram-status" class="details">Estable</span>
+            <span id="ram-status" class="details">Espacio de trabajo estable</span>
         </div>
 
         <div class="card">
-            <span class="card-title"><i class="fas fa-hdd"></i> Almacenamiento</span>
+            <span class="card-title"><i class="fas fa-hdd"></i> Disco Duro</span>
             <span id="disk-val" class="val-main">0%</span>
             <div class="progress-bar"><div id="disk-fill" class="progress-fill" style="background: #fff;"></div></div>
-            <span id="disk-details" class="details">Cargando datos...</span>
+            <span id="disk-details" class="details">Calculando GB libres...</span>
         </div>
 
         <div class="card">
-            <span class="card-title"><i class="fas fa-bolt" id="charge-icon"></i> Energía Vital</span>
+            <span class="card-title"><i class="fas fa-bolt" id="charge-icon"></i> Energía</span>
             <span id="bat-val" class="val-main">0%</span>
             <div class="progress-bar"><div id="bat-fill" class="progress-fill" style="background: var(--good);"></div></div>
-            <span id="bat-status" class="details">Verificando...</span>
+            <span id="bat-status" class="details">Verificando conexión...</span>
         </div>
     </div>
 </div>
@@ -74,33 +76,36 @@
         try {
             const res = await fetch("https://sistem-diag-default-rtdb.firebaseio.com/monitoreo.json");
             const d = await res.json();
-            
-            // Header
-            document.getElementById('user-name').innerText = d.info.user;
-            document.getElementById('uptime').innerText = d.info.uptime;
+            if(!d) return;
 
-            // CPU
+            // Datos del encabezado
+            document.getElementById('user-name').innerText = d.info.user || "Equipo";
+            document.getElementById('uptime').innerText = d.info.uptime;
+            document.getElementById('ping-val').innerText = d.info.ping || "---";
+
+            // Actualización de CPU
             document.getElementById('cpu-val').innerText = d.stats.cpu + "%";
             document.getElementById('cpu-fill').style.width = d.stats.cpu + "%";
-            document.getElementById('cpu-status').innerText = d.stats.cpu > 70 ? "¡Muy ocupado!" : "Trabajando bien";
+            document.getElementById('cpu-status').innerText = d.stats.cpu > 75 ? "¡Está trabajando muy duro!" : "Funcionamiento normal";
 
-            // RAM
+            // Actualización de RAM
             document.getElementById('ram-val').innerText = d.stats.ram + "%";
             document.getElementById('ram-fill').style.width = d.stats.ram + "%";
 
-            // DISCO (Tus "numeritos" solicitados)
+            // ACTUALIZACIÓN DE DISCO (Sin undefined)
             document.getElementById('disk-val').innerText = d.stats.disk + "%";
             document.getElementById('disk-fill').style.width = d.stats.disk + "%";
             document.getElementById('disk-details').innerHTML = 
                 `Libre: <b>${d.info.disk_free}</b> de ${d.info.disk_total}`;
 
-            // BATERÍA
+            // Actualización de BATERÍA
             document.getElementById('bat-val').innerText = d.stats.bat + "%";
             document.getElementById('bat-fill').style.width = d.stats.bat + "%";
-            document.getElementById('bat-status').innerText = d.stats.charging ? "Conectado a corriente" : "Usando batería";
-            document.getElementById('charge-icon').style.color = d.stats.charging ? "var(--good)" : "#fff";
+            const isCharging = d.stats.charging;
+            document.getElementById('bat-status').innerText = isCharging ? "Cargando correctamente" : "Funcionando con batería";
+            document.getElementById('charge-icon').style.color = isCharging ? "var(--good)" : "#fff";
 
-        } catch(e) {}
+        } catch(e) { console.error("Error al obtener datos"); }
     }
     setInterval(update, 1000);
 </script>
