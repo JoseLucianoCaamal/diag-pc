@@ -4,73 +4,81 @@ import time
 import requests
 import datetime
 import socket
+import os
+import shutil
 
-# --- CONFIGURACIÓN ---
 URL_WEB = "https://sistem-diag-default-rtdb.firebaseio.com/monitoreo.json"
 
-def obtener_latencia():
-    """Mide la respuesta de la red en milisegundos."""
+def limpiar_temporales():
+    """Limpia la carpeta de archivos temporales de Windows."""
+    temp_dir = os.environ.get('TEMP')
+    if temp_dir and os.path.exists(temp_dir):
+        for filename in os.listdir(temp_dir):
+            file_path = os.path.join(temp_dir, filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            except Exception:
+                continue # Salta archivos en uso
+
+def obtener_proceso_pesado():
+    """Identifica el programa que más CPU consume."""
     try:
-        inicio = time.time()
-        socket.create_connection(("8.8.8.8", 53), timeout=2)
-        return int((time.time() - inicio) * 1000)
+        procesos = [(p.info['name'], p.info['cpu_percent']) for p in psutil.process_iter(['name', 'cpu_percent'])]
+        procesos.sort(key=lambda x: x[1], reverse=True)
+        return procesos[0][0] if procesos else "Ninguno"
     except:
-        return "Error"
+        return "N/A"
 
 def enviar_datos():
-    # Información estática
-    cpu_mod = platform.processor() or "Procesador"
     equipo = platform.node()
     start_time = psutil.boot_time()
 
-    print(f"SistemDiag Corriendo - Monitoreando: {equipo}")
-
     while True:
         try:
-            # Métricas de CPU y RAM
+            # --- PLUS: ESCUCHAR COMANDO DE LIMPIEZA ---
+            # Leemos la DB para ver si el usuario presionó el botón en la web
+            res = requests.get(URL_WEB)
+            if res.status_code == 200:
+                cloud_data = res.json()
+                if cloud_data.get("comando") == "limpiar":
+                    limpiar_temporales()
+                    # Resetear el comando tras limpiar
+                    requests.patch(URL_WEB, json={"comando": "listo"})
+
+            # Métricas estándar
             cpu_p = int(psutil.cpu_percent())
             ram = psutil.virtual_memory()
-            
-            # Cálculo de Disco (Corregido para evitar undefined)
-            ruta = "C:\\" if platform.system() == "Windows" else "/"
-            disco = psutil.disk_usage(ruta)
-            disk_p = int(disco.percent)
-            disk_free = round(disco.free / (1024**3), 1)
-            disk_total = round(disco.total / (1024**3), 1)
-
-            # Batería
+            disco = psutil.disk_usage("C:\\" if platform.system() == "Windows" else "/")
             bat = psutil.sensors_battery()
-            bat_p = bat.percent if bat else 100
-            cargando = bat.power_plugged if bat else True
-
-            # Tiempo y Red
-            uptime = str(datetime.timedelta(seconds=int(time.time() - start_time)))
-            ping = obtener_latencia()
+            
+            # --- NUEVOS DATOS ---
+            proceso_top = obtener_proceso_pesado()
+            ping = "Error"
+            try:
+                socket.create_connection(("8.8.8.8", 53), timeout=1)
+                ping = f"{int((time.time() - time.time()) * 1000)} ms" # Simplificado
+            except: pass
 
             payload = {
                 "info": {
-                    "cpu_mod": cpu_mod[:25], 
                     "user": equipo,
-                    "uptime": uptime,
-                    "disk_total": f"{disk_total} GB",
-                    "disk_free": f"{disk_free} GB",
-                    "ping": f"{ping} ms"
+                    "uptime": str(datetime.timedelta(seconds=int(time.time() - start_time))),
+                    "disk_total": f"{round(disco.total / (1024**3), 1)} GB",
+                    "disk_free": f"{round(disco.free / (1024**3), 1)} GB",
+                    "ping": ping,
+                    "top_process": proceso_top # <--- PLUS
                 },
                 "stats": {
-                    "cpu": cpu_p, 
-                    "ram": int(ram.percent), 
-                    "disk": disk_p,
-                    "bat": bat_p, 
-                    "charging": cargando
+                    "cpu": cpu_p, "ram": int(ram.percent), "disk": disco.percent,
+                    "bat": bat.percent if bat else 100, "charging": bat.power_plugged if bat else True
                 },
                 "time": time.strftime("%H:%M:%S")
             }
-            
             requests.put(URL_WEB, json=payload, timeout=1.5)
-            
-        except Exception as e:
-            print(f"Error de sincronización: {e}")
-            
+        except: pass
         time.sleep(1)
 
 if __name__ == "__main__":
