@@ -3,238 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SistemDiag | Terminal de Diagnóstico</title>
+    <title>SistemDiag PRO | Hardware Terminal</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --primary: #00d4ff;
-            --secondary: #ff0055;
-            --success: #00ff88;
-            --warning: #f1c40f;
-            --bg: #0b0e14;
-            --card-bg: #151921;
-            --border: #252a34;
+            --primary: #00d4ff; --secondary: #ff0055; --success: #00ff88;
+            --bg: #0b0e14; --card-bg: #151921; --border: #252a34;
         }
-
         body {
-            font-family: 'Consolas', 'Monaco', monospace;
-            background-color: var(--bg);
-            color: #fff;
-            margin: 0; padding: 20px;
-            display: flex; flex-direction: column; align-items: center;
+            font-family: 'Consolas', monospace; background: var(--bg); color: #fff;
+            margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center;
         }
-
-        .header { text-align: center; margin-bottom: 20px; }
-        .header h2 { color: var(--primary); letter-spacing: 4px; margin-bottom: 5px; }
+        .header { width: 100%; max-width: 900px; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
         
-        .hw-info {
-            background: rgba(0, 212, 255, 0.03);
-            padding: 12px 30px;
-            border-radius: 5px;
-            display: flex; gap: 25px;
-            font-size: 0.8rem;
-            border: 1px solid var(--border);
-            margin-bottom: 25px;
-            color: #aaa;
-        }
-
         .main-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 15px;
-            width: 100%;
-            max-width: 900px;
-            margin-bottom: 20px;
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; width: 100%; max-width: 900px; margin-bottom: 20px;
         }
-
         .card {
-            background: var(--card-bg);
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            text-align: center;
-            position: relative;
-            overflow: hidden;
+            background: var(--card-bg); padding: 15px; border-radius: 5px; border: 1px solid var(--border); text-align: center;
         }
+        .val { font-size: 2rem; font-weight: bold; margin: 5px 0; }
+        .label { font-size: 0.6rem; color: #555; letter-spacing: 1px; }
 
-        .card::before {
-            content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--primary);
+        .console-container {
+            width: 100%; max-width: 900px; display: grid; grid-template-columns: 1.5fr 1fr; gap: 15px;
         }
-
-        .card.bat-card::before { background: var(--success); }
-
-        .percentage { font-size: 2.5rem; font-weight: bold; margin: 10px 0; }
-        .label { font-size: 0.7rem; color: #555; letter-spacing: 1px; text-transform: uppercase; }
-
-        /* Panel de Log y Diagnóstico */
-        .terminal-container {
-            width: 100%;
-            max-width: 900px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
+        .terminal {
+            background: #000; border: 1px solid var(--border); height: 300px; padding: 15px; overflow-y: hidden; position: relative;
         }
+        .terminal-header { font-size: 0.7rem; color: var(--primary); margin-bottom: 10px; border-bottom: 1px solid #111; padding-bottom: 5px; }
+        #log { font-size: 0.8rem; color: var(--success); line-height: 1.5; }
 
-        .panel {
-            background: #000;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 15px;
-            height: 250px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .panel-header {
-            font-size: 0.75rem;
-            color: var(--primary);
-            border-bottom: 1px solid #222;
-            padding-bottom: 8px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        #event-log {
-            font-size: 0.8rem;
-            color: #00ff00;
-            overflow-y: auto;
-            flex-grow: 1;
-            line-height: 1.4;
-        }
-
-        .diag-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            font-size: 0.85rem;
-        }
-
-        .status-ok { color: var(--success); }
-        .status-warn { color: var(--warning); }
-
-        .status-footer {
-            margin-top: 20px;
-            font-size: 0.65rem;
-            color: #333;
-        }
+        .health-box { display: flex; flex-direction: column; gap: 10px; }
+        .health-item { background: #1a1f29; padding: 10px; border-radius: 4px; display: flex; justify-content: space-between; font-size: 0.8rem; }
+        .status-tag { color: var(--success); font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h2>> SISTEM_DIAG_PRO</h2>
-        <div class="hw-info">
-            <span><i class="fas fa-microchip"></i> <span id="cpu_mod">...</span></span>
-            <span><i class="fas fa-memory"></i> <span id="ram_t">...</span></span>
-            <span><i class="fas fa-hdd"></i> <span id="disk_t">...</span></span>
-        </div>
+        <span style="color: var(--primary); font-weight: bold;">[ SISTEM_DIAG_V4 ]</span>
+        <span id="user-tag" style="font-size: 0.8rem; color: #666;">USER: ---</span>
     </div>
 
     <div class="main-grid">
-        <div class="card">
-            <div class="label">CPU LOAD</div>
-            <div id="cpu-val" class="percentage" style="color: var(--primary);">0%</div>
-        </div>
-        <div class="card">
-            <div class="label">RAM USAGE</div>
-            <div id="ram-val" class="percentage" style="color: var(--secondary);">0%</div>
-        </div>
-        <div class="card">
-            <div class="label">DISK SPACE</div>
-            <div id="disk-val" class="percentage" style="color: #fff;">0%</div>
-        </div>
-        <div class="card bat-card">
-            <div class="label" id="bat-label">BATTERY</div>
-            <div id="bat-val" class="percentage" style="color: var(--success);">0%</div>
-        </div>
+        <div class="card"><div class="label">CPU</div><div id="cpu-p" class="val" style="color:var(--primary)">0%</div></div>
+        <div class="card"><div class="label">RAM</div><div id="ram-p" class="val" style="color:var(--secondary)">0%</div></div>
+        <div class="card"><div class="label">BATTERY</div><div id="bat-p" class="val" style="color:var(--success)">0%</div></div>
+        <div class="card"><div class="label">HEALTH</div><div id="bat-h" class="val" style="color:#fff">--%</div></div>
     </div>
 
-    <div class="terminal-container">
-        <div class="panel">
-            <div class="panel-header">
-                <span>SYSTEM_EVENTS_LOG</span>
-                <i class="fas fa-terminal"></i>
-            </div>
-            <div id="event-log"></div>
+    <div class="console-container">
+        <div class="terminal">
+            <div class="terminal-header">LIVE_SYSTEM_LOG</div>
+            <div id="log"></div>
         </div>
-
-        <div class="panel">
-            <div class="panel-header">
-                <span>HARDWARE_HEALTH_CHECK</span>
-                <i class="fas fa-check-circle"></i>
-            </div>
-            <div id="diag-panel">
-                <div class="diag-item"><span>Power Source:</span> <span id="diag-power">---</span></div>
-                <div class="diag-item"><span>Thermal State:</span> <span class="status-ok">NOMINAL</span></div>
-                <div class="diag-item"><span>Memory Leak:</span> <span class="status-ok">NONE</span></div>
-                <div class="diag-item"><span>Storage Health:</span> <span id="diag-disk">OK</span></div>
-            </div>
+        <div class="health-box">
+            <div class="health-item"><span>CPU Model:</span> <span id="cpu-m" style="color:#aaa">---</span></div>
+            <div class="health-item"><span>Total RAM:</span> <span id="ram-t" style="color:#aaa">---</span></div>
+            <div class="health-item"><span>Power Mode:</span> <span id="p-mode" class="status-tag">---</span></div>
+            <div class="health-item"><span>System Uptime:</span> <span id="uptime" style="color:var(--primary)">00:00:00</span></div>
         </div>
-    </div>
-
-    <div class="status-footer">
-        <span id="update-time">LAST_UPDATE: --:--:--</span> | ENCRYPTION_ACTIVE: AES-256
     </div>
 
     <script>
-        const dbUrl = "https://sistem-diag-default-rtdb.firebaseio.com/monitoreo.json";
-        let lastChargeState = null;
+        const logDiv = document.getElementById('log');
+        let lastCharge = null;
 
-        function addLog(message) {
-            const log = document.getElementById('event-log');
+        function addLog(msg) {
             const time = new Date().toLocaleTimeString();
-            const entry = document.createElement('div');
-            entry.innerHTML = `<span style="color: #555;">[${time}]</span> ${message}`;
-            log.prepend(entry);
-            if (log.childNodes.length > 15) log.removeChild(log.lastChild);
+            logDiv.innerHTML = `<div><span style="color:#444">[${time}]</span> ${msg}</div>` + logDiv.innerHTML;
         }
 
         async function update() {
             try {
-                const res = await fetch(dbUrl);
-                const data = await res.json();
-                if(!data) return;
+                const res = await fetch("https://sistem-diag-default-rtdb.firebaseio.com/monitoreo.json");
+                const d = await res.json();
+                
+                document.getElementById('cpu-p').innerText = d.stats.cpu + "%";
+                document.getElementById('ram-p').innerText = d.stats.ram + "%";
+                document.getElementById('bat-p').innerText = d.stats.bat + "%";
+                document.getElementById('bat-h').innerText = d.stats.bat_health + "%";
+                
+                document.getElementById('cpu-m').innerText = d.info.cpu_mod;
+                document.getElementById('ram-t').innerText = d.info.ram_t;
+                document.getElementById('user-tag').innerText = "USER: " + d.info.user;
+                document.getElementById('uptime').innerText = d.info.uptime;
+                
+                const charging = d.stats.charging;
+                document.getElementById('p-mode').innerText = charging ? "CHARGING" : "DISCHARGING";
+                document.getElementById('p-mode').style.color = charging ? "var(--success)" : "var(--secondary)";
 
-                // Actualizar Info General
-                document.getElementById('cpu_mod').innerText = data.info.cpu_mod;
-                document.getElementById('ram_t').innerText = data.info.ram_t;
-                document.getElementById('disk_t').innerText = data.info.disk_t;
-                
-                // Actualizar Porcentajes
-                document.getElementById('cpu-val').innerText = data.stats.cpu + "%";
-                document.getElementById('ram-val').innerText = data.stats.ram + "%";
-                document.getElementById('disk-val').innerText = data.stats.disk + "%";
-                
-                // Lógica de Batería y Log
-                const batVal = data.stats.bat;
-                const isCharging = data.stats.charging;
-                
-                document.getElementById('bat-val').innerText = batVal + "%";
-                document.getElementById('diag-power').innerText = isCharging ? "AC_ADAPTER" : "BATTERY_ONLY";
-                document.getElementById('diag-power').className = isCharging ? "status-ok" : "status-warn";
-                document.getElementById('bat-label').innerText = isCharging ? "CHARGING" : "BATTERY";
-
-                // Detectar cambios de estado para el Log
-                if (lastChargeState !== null && lastChargeState !== isCharging) {
-                    const msg = isCharging ? "Power Cable Connected" : "Power Cable Disconnected";
-                    addLog(msg);
+                if(lastCharge !== null && lastCharge !== charging) {
+                    addLog(charging ? "External Power Connected" : "Running on Battery Power");
                 }
-                lastChargeState = isCharging;
-
-                // Check de Disco
-                if (data.stats.disk > 90) {
-                    document.getElementById('diag-disk').innerText = "LOW_SPACE";
-                    document.getElementById('diag-disk').className = "status-warn";
-                }
-
-                document.getElementById('update-time').innerText = "LAST_UPDATE: " + data.time;
-
-            } catch (e) { console.error("Sync Error"); }
+                lastCharge = charging;
+            } catch(e) {}
         }
 
-        // Log inicial
-        addLog("SistemDiag Session Started");
+        addLog("Diagnostic Engine Started...");
         setInterval(update, 1000);
     </script>
 </body>
